@@ -23,6 +23,7 @@ use PHPStan\PhpDocParser\Parser\ConstExprParser;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\PhpDocParser\Parser\TokenIterator;
 use PHPStan\PhpDocParser\Parser\TypeParser;
+use Qossmic\Deptrac\Contract\Ast\DependencyContext;
 use Qossmic\Deptrac\Core\Ast\AstMap\File\FileReferenceBuilder;
 use Qossmic\Deptrac\Core\Ast\AstMap\ReferenceBuilder;
 use Qossmic\Deptrac\Core\Ast\Parser\Extractors\ReferenceExtractorInterface;
@@ -39,15 +40,10 @@ class FileReferenceVisitor extends NodeVisitorAbstract
     private readonly PhpDocParser $docParser;
 
     private ReferenceBuilder $currentReference;
-    private bool $skipDeprecated = false;
 
-    /**
-     * @param array{skip_deprecated: bool,...} $config
-     */
     public function __construct(
         private readonly FileReferenceBuilder $fileReferenceBuilder,
         private readonly TypeResolver $typeResolver,
-        array $config,
         ReferenceExtractorInterface ...$dependencyResolvers
     ) {
         $this->currentTypeScope = new TypeScope('');
@@ -55,7 +51,6 @@ class FileReferenceVisitor extends NodeVisitorAbstract
         $this->docParser = new PhpDocParser(new TypeParser(), new ConstExprParser());
         $this->dependencyResolvers = $dependencyResolvers;
         $this->currentReference = $fileReferenceBuilder;
-        $this->skipDeprecated = $config['skip_deprecated'] ?? false;
     }
 
     /**
@@ -109,8 +104,9 @@ class FileReferenceVisitor extends NodeVisitorAbstract
             default => null
         };
 
-        if ($node instanceof Node\FunctionLike && $this->shouldSkipDeprecated($node)) {
-            return null;
+        if ($node instanceof Node\FunctionLike) {
+            // Set marker if the method is deprecated
+            $this->isDeprecated($node);
         }
 
         foreach ($this->dependencyResolvers as $resolver) {
@@ -195,10 +191,10 @@ class FileReferenceVisitor extends NodeVisitorAbstract
             $tags = $this->extractTags($docNodeCrate[0]);
         }
 
-        if ($this->shouldSkipDeprecated($node, $docNodeCrate[0] ?? null)) {
-            $this->currentReference = $this->fileReferenceBuilder->newDisabled();
-        } else {
-            $this->currentReference = $this->fileReferenceBuilder->newFunction($name, $this->templatesFromDocs($node), $tags);
+        $this->currentReference = $this->fileReferenceBuilder->newFunction($name, $this->templatesFromDocs($node), $tags);
+
+        if ($this->isDeprecated($node)) {
+            $this->currentReference->setContext(new DependencyContext(null, true));
         }
 
         foreach ($node->getParams() as $param) {
@@ -243,13 +239,10 @@ class FileReferenceVisitor extends NodeVisitorAbstract
      */
     private function enterInterface(string $name, Interface_ $node, array $tags): void
     {
-        if ($this->shouldSkipDeprecated($node)) {
-            $this->currentReference = $this->fileReferenceBuilder->newDisabled();
-
-            return;
-        }
-
         $this->currentReference = $this->fileReferenceBuilder->newInterface($name, $this->templatesFromDocs($node), $tags);
+        if ($this->isDeprecated($node)) {
+            $this->currentReference->setContext(new DependencyContext(null, true));
+        }
 
         foreach ($node->extends as $extend) {
             $this->currentReference->implements($extend->toCodeString(), $extend->getLine());
@@ -261,13 +254,11 @@ class FileReferenceVisitor extends NodeVisitorAbstract
      */
     private function enterClass(string $name, Class_ $node, array $tags): void
     {
-        if ($this->shouldSkipDeprecated($node)) {
-            $this->currentReference = $this->fileReferenceBuilder->newDisabled();
-
-            return;
+        $this->currentReference = $this->fileReferenceBuilder->newClass($name, $this->templatesFromDocs($node), $tags);
+        if ($this->isDeprecated($node)) {
+            $this->currentReference->setContext(new DependencyContext(null, true));
         }
 
-        $this->currentReference = $this->fileReferenceBuilder->newClass($name, $this->templatesFromDocs($node), $tags);
         if ($node->extends instanceof Name) {
             $this->currentReference->extends($node->extends->toCodeString(), $node->extends->getLine());
         }
@@ -277,21 +268,27 @@ class FileReferenceVisitor extends NodeVisitorAbstract
         }
     }
 
+    /**
+     * @param array<string,list<string>> $tags
+     */
     private function enterTrait(string $name, Trait_ $node, array $tags): void
     {
-        if ($this->shouldSkipDeprecated($node)) {
-            $this->currentReference = $this->fileReferenceBuilder->newDisabled();
-        } else {
-            $this->currentReference = $this->fileReferenceBuilder->newTrait($name, $this->templatesFromDocs($node), $tags);
+        $this->currentReference = $this->fileReferenceBuilder->newTrait($name, $this->templatesFromDocs($node), $tags);
+
+        if ($this->isDeprecated($node)) {
+            $this->currentReference->setContext(new DependencyContext(null, true));
         }
     }
 
+    /**
+     * @param array<string,list<string>> $tags
+     */
     private function enterOtherClassLike(string $name, ClassLike $node, array $tags): void
     {
-        if ($this->shouldSkipDeprecated($node)) {
-            $this->currentReference = $this->fileReferenceBuilder->newDisabled();
-        } else {
-            $this->currentReference = $this->fileReferenceBuilder->newClassLike($name, $this->templatesFromDocs($node), $tags);
+        $this->currentReference = $this->fileReferenceBuilder->newClassLike($name, $this->templatesFromDocs($node), $tags);
+
+        if ($this->isDeprecated($node)) {
+            $this->currentReference->setContext(new DependencyContext(null, true));
         }
     }
 
@@ -379,19 +376,16 @@ class FileReferenceVisitor extends NodeVisitorAbstract
         return $tags;
     }
 
-    private function shouldSkipDeprecated(Node $node): bool
+    private function isDeprecated(Node $node): bool
     {
-        // FIXME: set skipDeprecated from Config!
-        if (!$this->skipDeprecated) {
-            return false;
-        }
-
         // FIXME: ClassLike as well?!
         if ($node instanceof Node\FunctionLike) {
             foreach ($node->getAttrGroups() as $attrGroup) {
                 foreach ($attrGroup->attrs as $attribute) {
                     // Proposed per https://wiki.php.net/rfc/deprecated_attribute
                     if ('Deprecated' == $attribute->name) {
+                        $node->setAttribute('deprecated', true);
+
                         return true;
                     }
                 }
@@ -403,6 +397,8 @@ class FileReferenceVisitor extends NodeVisitorAbstract
 
         // Per https://docs.phpdoc.org/3.0/guide/references/phpdoc/tags/deprecated.html
         if ($docNode && $docNode->getTagsByName('@deprecated')) {
+            $node->setAttribute('deprecated', true);
+
             return true;
         }
 

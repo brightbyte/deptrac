@@ -28,7 +28,8 @@ final class ClassSuperglobalDependencyEmitter implements DependencyEmitterInterf
                         $classReference->getToken(),
                         $dependency->token,
                         $dependency->fileOccurrence,
-                        $dependency->type
+                        $dependency->type,
+                        $dependency->context
                     )
                 );
             }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Qossmic\Deptrac\Core\Ast\AstMap\ClassLike;
 
+use Qossmic\Deptrac\Contract\Ast\DependencyContext;
 use Qossmic\Deptrac\Contract\Ast\FileOccurrence;
 use Qossmic\Deptrac\Core\Ast\AstMap\AstInherit;
 use Qossmic\Deptrac\Core\Ast\AstMap\AstInheritType;
@@ -25,7 +26,7 @@ final class ClassLikeReferenceBuilder extends ReferenceBuilder
         private readonly ClassLikeType $classLikeType,
         private readonly array $tags
     ) {
-        parent::__construct($tokenTemplates, $filepath);
+        parent::__construct($tokenTemplates, $filepath, new DependencyContext(null));
     }
 
     /**

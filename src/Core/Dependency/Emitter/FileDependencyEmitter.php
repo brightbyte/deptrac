@@ -33,7 +33,8 @@ final class FileDependencyEmitter implements DependencyEmitterInterface
                         $fileReference->getToken(),
                         $dependency->token,
                         $dependency->fileOccurrence,
-                        $dependency->type
+                        $dependency->type,
+                        $dependency->context
                     )
                 );
             }

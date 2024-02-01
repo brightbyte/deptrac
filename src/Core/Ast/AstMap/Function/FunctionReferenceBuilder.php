@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Qossmic\Deptrac\Core\Ast\AstMap\Function;
 
+use Qossmic\Deptrac\Contract\Ast\DependencyContext;
 use Qossmic\Deptrac\Core\Ast\AstMap\ReferenceBuilder;
 
 class FunctionReferenceBuilder extends ReferenceBuilder
@@ -20,7 +21,8 @@ class FunctionReferenceBuilder extends ReferenceBuilder
     ) {
         parent::__construct(
             $tokenTemplates,
-            $filepath
+            $filepath,
+            new DependencyContext($this->functionName)
         );
     }
 

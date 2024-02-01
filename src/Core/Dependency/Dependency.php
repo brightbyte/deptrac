@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Qossmic\Deptrac\Core\Dependency;
 
+use Qossmic\Deptrac\Contract\Ast\DependencyContext;
 use Qossmic\Deptrac\Contract\Ast\DependencyType;
 use Qossmic\Deptrac\Contract\Ast\FileOccurrence;
 use Qossmic\Deptrac\Contract\Ast\TokenInterface;
@@ -15,7 +16,8 @@ class Dependency implements DependencyInterface
         private readonly TokenInterface $depender,
         private readonly TokenInterface $dependent,
         private readonly FileOccurrence $fileOccurrence,
-        private readonly DependencyType $dependencyType
+        private readonly DependencyType $dependencyType,
+        private readonly DependencyContext $context,
     ) {}
 
     public function serialize(): array
@@ -44,5 +46,10 @@ class Dependency implements DependencyInterface
     public function getType(): DependencyType
     {
         return $this->dependencyType;
+    }
+
+    public function getContext(): DependencyContext
+    {
+        return $this->context;
     }
 }

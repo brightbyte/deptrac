@@ -34,7 +34,8 @@ final class FunctionDependencyEmitter implements DependencyEmitterInterface
                             $astFunctionReference->getToken(),
                             $dependency->token,
                             $dependency->fileOccurrence,
-                            $dependency->type
+                            $dependency->type,
+                            $dependency->context
                         )
                     );
                 }

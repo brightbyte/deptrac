@@ -46,7 +46,8 @@ final class UsesDependencyEmitter implements DependencyEmitterInterface
                                 $astClassReference->getToken(),
                                 $emittedDependency->token,
                                 $emittedDependency->fileOccurrence,
-                                $emittedDependency->type
+                                $emittedDependency->type,
+                                $emittedDependency->context
                             )
                         );
                     }

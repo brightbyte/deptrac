@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Qossmic\Deptrac\Core\Ast\AstMap\File;
 
+use Qossmic\Deptrac\Contract\Ast\DependencyContext;
 use Qossmic\Deptrac\Contract\Ast\DependencyType;
 use Qossmic\Deptrac\Contract\Ast\FileOccurrence;
 use Qossmic\Deptrac\Core\Ast\AstMap\ClassLike\ClassLikeReferenceBuilder;
@@ -23,7 +24,7 @@ final class FileReferenceBuilder extends ReferenceBuilder
 
     public static function create(string $filepath): self
     {
-        return new self([], $filepath);
+        return new self([], $filepath, new DependencyContext(null));
     }
 
     public function useStatement(string $classLikeName, int $occursAtLine): self
@@ -31,7 +32,8 @@ final class FileReferenceBuilder extends ReferenceBuilder
         $this->dependencies[] = new DependencyToken(
             ClassLikeToken::fromFQCN($classLikeName),
             new FileOccurrence($this->filepath, $occursAtLine),
-            DependencyType::USE
+            DependencyType::USE,
+            $this->context
         );
 
         return $this;
@@ -95,11 +97,6 @@ final class FileReferenceBuilder extends ReferenceBuilder
         $this->functionReferences[] = $functionReference;
 
         return $functionReference;
-    }
-
-    public function newDisabled(): DisabledReferenceBuilder
-    {
-        return new DisabledReferenceBuilder([], $this->filepath);
     }
 
     public function build(): FileReference

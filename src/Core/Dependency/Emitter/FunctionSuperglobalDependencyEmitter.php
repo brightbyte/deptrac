@@ -29,7 +29,8 @@ final class FunctionSuperglobalDependencyEmitter implements DependencyEmitterInt
                             $astFunctionReference->getToken(),
                             $dependency->token,
                             $dependency->fileOccurrence,
-                            $dependency->type
+                            $dependency->type,
+                            $dependency->context
                         )
                     );
                 }

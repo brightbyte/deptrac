@@ -101,10 +101,9 @@ final class NikicPhpParserTest extends TestCase
         $this->assertSame([], $classesByName['UntaggedThing']->tags);
     }
 
-    public function testSkipDeprecated(): void
+    public function testMarkDeprecated(): void
     {
         $parser = $this->createParser(
-            ['skip_deprecated' => true],
             [
                 new FunctionLikeExtractor(new TypeResolver()),
             ]
@@ -113,8 +112,8 @@ final class NikicPhpParserTest extends TestCase
         $filePath = __DIR__.'/Fixtures/Deprecations.php';
         $astFileReference = $parser->parseFile($filePath);
 
-        self::assertCount(3, $astFileReference->classLikeReferences);
         $classesByName = $this->refsByName($astFileReference->classLikeReferences);
+        self::assertCount(4, $classesByName);
 
         /**
          * @var ClassLikeReference $deprecatedClass
@@ -123,15 +122,23 @@ final class NikicPhpParserTest extends TestCase
         $deprecatedClass = $classesByName['DeprecatedClass'];
         $undeprecatedClass = $classesByName['UndeprecatedClass'];
 
-        // A deprecated class should not record any dependencies
-        $this->assertEmpty($deprecatedClass->dependencies);
+        // All dependencies of a deprecated class should have a deprecation marker in their context
+        foreach ($deprecatedClass->dependencies as $dep) {
+            $this->assertTrue($dep->context->deprecated);
+        }
 
-        // A deprecated method should not record any dependencies
-        $this->assertCount(1, $undeprecatedClass->dependencies);
-        $this->assertStringContainsString(
-            'AnotherThing',
-            $undeprecatedClass->dependencies[0]->token->toString()
-        );
+        // A deprecated method should cause deprecation markers in the dependency context
+        $countDeprecated = 0;
+        foreach ($undeprecatedClass->dependencies as $dep) {
+            if ('deprecatedMethod' === $dep->context->function) {
+                $this->assertTrue($dep->context->deprecated);
+                ++$countDeprecated;
+            } else {
+                $this->assertFalse($dep->context->deprecated);
+            }
+        }
+
+        $this->assertSame(2, $countDeprecated);
     }
 
     public function testParseFunctionDocTags(): void
@@ -167,7 +174,7 @@ final class NikicPhpParserTest extends TestCase
         return $refsByName;
     }
 
-    private function createParser($config = [], $extractors = []): NikicPhpParser
+    private function createParser($extractors = []): NikicPhpParser
     {
         $typeResolver = new TypeResolver();
         $parser = new NikicPhpParser(
@@ -177,7 +184,6 @@ final class NikicPhpParserTest extends TestCase
             ),
             new AstFileReferenceInMemoryCache(),
             $typeResolver,
-            $config,
             $extractors
         );
 

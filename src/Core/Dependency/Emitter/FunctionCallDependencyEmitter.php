@@ -46,7 +46,11 @@ final class FunctionCallDependencyEmitter implements DependencyEmitterInterface
 
                 $dependencyList->addDependency(
                     new Dependency(
-                        $reference->getToken(), $dependency->token, $dependency->fileOccurrence, $dependency->type
+                        $reference->getToken(),
+                        $dependency->token,
+                        $dependency->fileOccurrence,
+                        $dependency->type,
+                        $dependency->context
                     )
                 );
             }

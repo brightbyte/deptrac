@@ -6,6 +6,7 @@ namespace Tests\Qossmic\Deptrac\Supportive\OutputFormatter;
 
 use PHPUnit\Framework\TestCase;
 use Qossmic\Deptrac\Contract\Analyser\AnalysisResult;
+use Qossmic\Deptrac\Contract\Ast\DependencyContext;
 use Qossmic\Deptrac\Contract\Ast\DependencyType;
 use Qossmic\Deptrac\Contract\Ast\FileOccurrence;
 use Qossmic\Deptrac\Contract\OutputFormatter\OutputFormatterInput;
@@ -34,16 +35,17 @@ final class GraphVizDotOutputFormatterTest extends TestCase
         $dotFile = __DIR__.'/data/graphviz.dot';
 
         $fileOccurrenceA = new FileOccurrence('classA.php', 0);
+        $contextA = new DependencyContext('test');
         $classA = ClassLikeToken::fromFQCN('ClassA');
 
         $analysisResult = new AnalysisResult();
-        $analysisResult->addRule(new Violation(new Dependency($classA, ClassLikeToken::fromFQCN('ClassB'), $fileOccurrenceA, DependencyType::PARAMETER), 'LayerA', 'LayerB', new DummyViolationCreatingRule()));
-        $analysisResult->addRule(new Violation(new Dependency($classA, ClassLikeToken::fromFQCN('ClassHidden'), $fileOccurrenceA, DependencyType::PARAMETER), 'LayerA', 'LayerHidden', new DummyViolationCreatingRule()));
+        $analysisResult->addRule(new Violation(new Dependency($classA, ClassLikeToken::fromFQCN('ClassB'), $fileOccurrenceA, DependencyType::PARAMETER, $contextA), 'LayerA', 'LayerB', new DummyViolationCreatingRule()));
+        $analysisResult->addRule(new Violation(new Dependency($classA, ClassLikeToken::fromFQCN('ClassHidden'), $fileOccurrenceA, DependencyType::PARAMETER, $contextA), 'LayerA', 'LayerHidden', new DummyViolationCreatingRule()));
         $analysisResult->addRule(new Violation(new Dependency(ClassLikeToken::fromFQCN('ClassAB'), ClassLikeToken::fromFQCN('ClassBA'),
-            new FileOccurrence('classAB.php', 1), DependencyType::PARAMETER
+            new FileOccurrence('classAB.php', 1), DependencyType::PARAMETER, $contextA
         ), 'LayerA', 'LayerB', new DummyViolationCreatingRule()));
-        $analysisResult->addRule(new Allowed(new Dependency($classA, ClassLikeToken::fromFQCN('ClassC'), $fileOccurrenceA, DependencyType::PARAMETER), 'LayerA', 'LayerC'));
-        $analysisResult->addRule(new Uncovered(new Dependency($classA, ClassLikeToken::fromFQCN('ClassD'), $fileOccurrenceA, DependencyType::PARAMETER), 'LayerC'));
+        $analysisResult->addRule(new Allowed(new Dependency($classA, ClassLikeToken::fromFQCN('ClassC'), $fileOccurrenceA, DependencyType::PARAMETER, $contextA), 'LayerA', 'LayerC'));
+        $analysisResult->addRule(new Uncovered(new Dependency($classA, ClassLikeToken::fromFQCN('ClassD'), $fileOccurrenceA, DependencyType::PARAMETER, $contextA), 'LayerC'));
 
         $bufferedOutput = new BufferedOutput();
         $input = new OutputFormatterInput(
@@ -78,7 +80,8 @@ final class GraphVizDotOutputFormatterTest extends TestCase
 
         $dependency = new Dependency(
             ClassLikeToken::fromFQCN('ClassA'),
-            ClassLikeToken::fromFQCN('ClassC'), new FileOccurrence('classA.php', 0), DependencyType::PARAMETER
+            ClassLikeToken::fromFQCN('ClassC'), new FileOccurrence('classA.php', 0),
+            DependencyType::PARAMETER, new DependencyContext('test')
         );
 
         $analysisResult = new AnalysisResult();
@@ -127,7 +130,8 @@ final class GraphVizDotOutputFormatterTest extends TestCase
 
         $dependency = new Dependency(
             ClassLikeToken::fromFQCN('ClassA'),
-            ClassLikeToken::fromFQCN('ClassC'), new FileOccurrence('classA.php', 0), DependencyType::PARAMETER
+            ClassLikeToken::fromFQCN('ClassC'), new FileOccurrence('classA.php', 0), 
+            DependencyType::PARAMETER, new DependencyContext('test')
         );
 
         $analysisResult = new AnalysisResult();

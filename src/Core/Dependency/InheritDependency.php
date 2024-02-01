@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Qossmic\Deptrac\Core\Dependency;
 
+use Qossmic\Deptrac\Contract\Ast\DependencyContext;
 use Qossmic\Deptrac\Contract\Ast\DependencyType;
 use Qossmic\Deptrac\Contract\Ast\FileOccurrence;
 use Qossmic\Deptrac\Contract\Ast\TokenInterface;
@@ -51,5 +52,10 @@ class InheritDependency implements DependencyInterface
     public function getType(): DependencyType
     {
         return $this->originalDependency->getType();
+    }
+
+    public function getContext(): DependencyContext
+    {
+        return $this->originalDependency->getContext();
     }
 }
